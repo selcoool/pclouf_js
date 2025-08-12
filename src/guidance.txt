@@ -1,0 +1,21 @@
+Đăng ký:
+{ "type": "register", "userId": "user1" }
+
+Huy dang ky:
+
+{ "type": "unregister" }
+
+Tham gia phòng:
+{ "type": "join_room", "roomId": "room1" }
+
+Rời phòng:
+{ "type": "leave_room", "roomId": "room1" }
+
+Gửi tin nhắn nhóm:
+{ "type": "group_message", "roomId": "room1", "content": "Hello nhóm!" }
+
+Gửi tin nhắn broadcast:
+{ "type": "broadcast_message", "content": "Hello tất cả mọi người!" }
+
+Gửi tin nhắn riêng:
+{ "type": "private_message", "toUserId": "user2", "content": "Chào bạn user2!" }
