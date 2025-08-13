@@ -1,0 +1,110 @@
+1. Mở WebSocket trong Postman
+Mở Postman → New Tab → chọn New WebSocket Request.
+
+Nhập URL endpoint, ví dụ:
+
+ws://localhost:3000/ws (CRUD user)
+
+ws://localhost:3000/chat (chat)
+
+ws://localhost:3000/users (lấy online users)
+
+2. Test /ws – CRUD User
+URL: ws://localhost:3000/ws
+
+a) Tạo user
+json
+Copy
+Edit
+{
+  "type": "create_user",
+  "name": "Alice",
+  "email": "alice@example.com"
+}
+b) Lấy danh sách user
+json
+Copy
+Edit
+{
+  "type": "get_users"
+}
+c) Cập nhật user
+json
+Copy
+Edit
+{
+  "type": "update_user",
+  "id": 1,
+  "name": "Alice Updated",
+  "email": "alice2@example.com"
+}
+d) Xóa user
+json
+Copy
+Edit
+{
+  "type": "delete_user",
+  "id": 1
+}
+3. Test /chat – Chat nhóm, broadcast, private
+URL: ws://localhost:3000/chat
+
+Mẹo: Mở 2 tab WebSocket trong Postman, 1 tab đăng ký user1, 1 tab đăng ký user2 để test chat real-time.
+
+a) Đăng ký user
+json
+Copy
+Edit
+{
+  "type": "register",
+  "userId": "user1"
+}
+b) Tham gia phòng
+json
+Copy
+Edit
+{
+  "type": "join_room",
+  "roomId": "room1"
+}
+c) Gửi tin nhắn nhóm
+json
+Copy
+Edit
+{
+  "type": "group_message",
+  "roomId": "room1",
+  "content": "Hello room1 from user1"
+}
+d) Gửi tin nhắn riêng
+json
+Copy
+Edit
+{
+  "type": "private_message",
+  "toUserId": "user2",
+  "content": "Hello user2"
+}
+e) Broadcast toàn hệ thống
+json
+Copy
+Edit
+{
+  "type": "broadcast_message",
+  "content": "Hello everyone!"
+}
+4. Test /users – Danh sách online
+URL: ws://localhost:3000/users
+
+Khi connect, server sẽ trả về:
+
+json
+Copy
+Edit
+{
+  "type": "online_users",
+  "data": [
+    { "id": "user1", "status": "online" },
+    { "id": "user2", "status": "online" }
+  ]
+}

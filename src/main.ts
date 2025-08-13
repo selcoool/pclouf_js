@@ -1,17 +1,36 @@
-
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { WebSocketService } from './websocket.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  const server = await app.listen(3000);
+  const server = app.getHttpServer();
 
-  new WebSocketService(server);
+  const wsService = app.get(WebSocketService);
+  wsService.initialize(server);
 
-  console.log('Server listening on http://localhost:3000');
+  await app.listen(3000);
+  console.log('HTTP server on http://localhost:3000');
 }
 bootstrap();
+
+
+
+
+
+// import { NestFactory } from '@nestjs/core';
+// import { AppModule } from './app.module';
+// import { WebSocketService } from './websocket.service';
+
+// async function bootstrap() {
+//   const app = await NestFactory.create(AppModule);
+//   const server = await app.listen(3000);
+
+//   new WebSocketService(server);
+
+//   console.log('Server listening on http://localhost:3000');
+// }
+// bootstrap();
 
 
 

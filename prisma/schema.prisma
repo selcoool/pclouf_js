@@ -14,33 +14,44 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+
 model User {
   id        String   @id @default(cuid())
-  userName  String   @unique
-  userEmail String   @unique
-  passWord  String
-  fullName  String?
+  name      String
+  email     String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  avatar    Avatar?
-
-  @@map("users")
 }
 
-model Avatar {
-  id        String   @id @default(cuid())
 
-  user_Id   String   @unique
-  user      User     @relation(fields: [user_Id], references: [id], onDelete: Cascade)
+// model User {
+//   id        String   @id @default(cuid())
+//   userName  String   @unique
+//   userEmail String   @unique
+//   passWord  String
+//   fullName  String?
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
 
-  fileUrl   String
-  fileName  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+//   avatar    Avatar?
 
-  @@map("avatars")
-}
+//   @@map("users")
+// }
+
+// model Avatar {
+//   id        String   @id @default(cuid())
+
+//   user_Id   String   @unique
+//   user      User     @relation(fields: [user_Id], references: [id], onDelete: Cascade)
+
+//   fileUrl   String
+//   fileName  String
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+
+//   @@map("avatars")
+// }
+
 
 
 
