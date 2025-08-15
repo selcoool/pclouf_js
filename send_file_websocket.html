@@ -1,0 +1,108 @@
+import { Injectable } from '@nestjs/common';
+import { Server as WSServer, WebSocket } from 'ws';
+import { Server as HttpServer } from 'http';
+import * as fs from 'fs';
+import * as path from 'path';
+
+@Injectable()
+export class WebSocketService {
+  private endpoints: Record<string, WSServer> = {};
+
+  initialize(server: HttpServer) {
+    // Khai báo endpoint /ws
+    this.endpoints['/ws'] = new WSServer({ noServer: true });
+
+    // Lắng nghe upgrade từ HTTP -> WS
+    server.on('upgrade', (req, socket, head) => {
+      const pathname = (req.url || '').split('?')[0]; // bỏ query string
+      const wss = this.endpoints[pathname];
+      if (wss) wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
+      else socket.destroy();
+    });
+
+    // Nhận dữ liệu từ client
+    this.endpoints['/ws'].on('connection', (ws: WebSocket) => {
+      ws.on('message', (data: Buffer) => {
+        try {
+          // 4 byte đầu: chiều dài meta JSON
+          const metaLen = data.readUInt32BE(0);
+          const metaBytes = data.slice(4, 4 + metaLen);
+          const fileBytes = data.slice(4 + metaLen);
+          const meta = JSON.parse(metaBytes.toString());
+
+          // Thư mục uploads
+          const folder = path.resolve(process.cwd(), 'uploads');
+          if (!fs.existsSync(folder)) fs.mkdirSync(folder);
+
+          // Lưu file
+          fs.writeFileSync(path.join(folder, meta.fileName), fileBytes);
+
+          ws.send(JSON.stringify({ type: 'success', message: `Uploaded ${meta.fileName}` }));
+        } catch (err: any) {
+          ws.send(JSON.stringify({ type: 'error', message: err.message }));
+        }
+      });
+    });
+  }
+}
+
+
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Upload qua WebSocket</title>
+</head>
+<body>
+  <h1>Upload ảnh qua WebSocket</h1>
+  <input type="file" id="fileInput" accept="image/*">
+  <button id="sendBtn">Gửi</button>
+
+  <div id="log"></div>
+
+  <script>
+    // Đổi sang link ngrok của bạn
+    const ws = new WebSocket("wss://a63b002c74aa.ngrok-free.app/ws");
+
+    ws.onopen = () => log("✅ Kết nối WebSocket thành công");
+    ws.onmessage = (event) => log("📩 Server: " + event.data);
+    ws.onerror = (err) => log("❌ Lỗi: " + err.message);
+
+    document.getElementById("sendBtn").onclick = async () => {
+      const file = document.getElementById("fileInput").files[0];
+      if (!file) {
+        alert("Vui lòng chọn file");
+        return;
+      }
+
+      const arrayBuffer = await file.arrayBuffer();
+      const meta = { fileName: file.name, type: file.type };
+      const metaBytes = new TextEncoder().encode(JSON.stringify(meta));
+
+      // [4 byte meta length][meta JSON][file data]
+      const totalLength = 4 + metaBytes.length + arrayBuffer.byteLength;
+      const sendBuffer = new Uint8Array(totalLength);
+
+      // Ghi meta length (4 byte)
+      const view = new DataView(sendBuffer.buffer);
+      view.setUint32(0, metaBytes.length);
+
+      // Ghi meta JSON
+      sendBuffer.set(metaBytes, 4);
+
+      // Ghi file data
+      sendBuffer.set(new Uint8Array(arrayBuffer), 4 + metaBytes.length);
+
+      // Gửi qua WS
+      ws.send(sendBuffer);
+      log(`📤 Đang gửi file: ${file.name}`);
+    };
+
+    function log(msg) {
+      const logDiv = document.getElementById("log");
+      logDiv.innerHTML += `<div>${msg}</div>`;
+    }
+  </script>
+</body>
+</html>

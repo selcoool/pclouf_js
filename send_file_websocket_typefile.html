@@ -1,0 +1,70 @@
+import { Injectable } from '@nestjs/common';
+import { Server as WSServer, WebSocket } from 'ws';
+import { Server as HttpServer } from 'http';
+import * as fs from 'fs';
+import * as path from 'path';
+
+@Injectable()
+export class WebSocketService {
+  private endpoints: Record<string, WSServer> = {};
+
+  initialize(server: HttpServer) {
+    this.endpoints['/ws'] = new WSServer({ noServer: true });
+
+    server.on('upgrade', (req, socket, head) => {
+      const pathname = (req.url || '').split('?')[0];
+      const wss = this.endpoints[pathname];
+      if (wss) wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
+      else socket.destroy();
+    });
+
+    this.endpoints['/ws'].on('connection', (ws: WebSocket) => {
+      ws.on('message', (data: Buffer) => {
+        try {
+          const metaLen = data.readUInt32BE(0);
+          const metaBytes = data.slice(4, 4 + metaLen);
+          const fileBytes = data.slice(4 + metaLen);
+          const meta = JSON.parse(metaBytes.toString());
+
+          // ✅ Kiểm tra loại file
+          const allowedTypes = ['image/jpeg', 'image/png'];
+          if (!allowedTypes.includes(meta.type)) {
+            ws.send(JSON.stringify({ type: 'error', message: 'Chỉ cho phép JPG hoặc PNG' }));
+            return;
+          }
+
+          // ✅ Kiểm tra kích thước (5MB = 5 * 1024 * 1024)
+          if (fileBytes.length > 5 * 1024 * 1024) {
+            ws.send(JSON.stringify({ type: 'error', message: 'File quá lớn (tối đa 5MB)' }));
+            return;
+          }
+
+          const folder = path.resolve(process.cwd(), 'uploads');
+          if (!fs.existsSync(folder)) fs.mkdirSync(folder);
+
+          fs.writeFileSync(path.join(folder, meta.fileName), fileBytes);
+
+          ws.send(JSON.stringify({
+            type: 'success',
+            message: `Uploaded ${meta.fileName}`
+          }));
+        } catch (err: any) {
+          ws.send(JSON.stringify({ type: 'error', message: err.message }));
+        }
+      });
+    });
+  }
+}
+
+
+
+
+<!-- Ví dụ nếu đổi thành 2 byte:
+
+Frontend gửi:
+
+metaBuffer = Buffer.from(JSON.stringify(meta), 'utf-8');
+const metaLenBuffer = Buffer.alloc(2);
+metaLenBuffer.writeUInt16BE(metaBuffer.length);
+const sendBuffer = Buffer.concat([metaLenBuffer, metaBuffer, fileBuffer]);
+ws.send(sendBuffer); -->
